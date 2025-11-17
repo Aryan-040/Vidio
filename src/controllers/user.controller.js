@@ -223,12 +223,21 @@ const changeCurrentPassword = asyncHandler (async (req,res) => {
     .json(new ApiResponse(200, {}, "Password changed successfully"))
 })
 
-const updateAccountDetails = asyncHandler(async(req,res)=>{
-    const {fullbody, email} = req.body
-
-    const user = User.findById(req?._id)
-    
-
-
+const getCurrentUser = asyncHandler(async(req, res) => {
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        req.user,
+        "User fetched successfully"
+    ))
 })
-export { registerUser, logInUser, logOutUser, refreshAccessToken, changeCurrentPassword }
+
+
+export { registerUser, 
+    logInUser, 
+    logOutUser, 
+    refreshAccessToken, 
+    changeCurrentPassword,
+    getCurrentUser 
+}
