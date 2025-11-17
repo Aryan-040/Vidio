@@ -276,6 +276,7 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
                 email: email
             }
         },
+        
         {new: true}
         
     ).select("-password")
