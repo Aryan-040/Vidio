@@ -2,6 +2,7 @@ import {isValidObjectId} from "mongoose"
 import {Like} from "../models/like.model.js"
 import {Video} from "../models/video.model.js"
 import {Comment} from "../models/comment.model.js"
+import {Tweet} from "../models/tweet.model.js"
 import ApiError from "../utils/apiError.js"
 import ApiResponse from "../utils/apiResponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
@@ -72,9 +73,42 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, {liked: true}, "Comment liked successfully"))
 })
+const toggleTweetLike = asyncHandler(async (req, res) => {
+    const {tweetId} = req.params
+    
+    if (!tweetId || !isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Invalid tweet ID")
+    }
 
+    const tweet = await Tweet.findById(tweetId)
+    if (!tweet) {
+        throw new ApiError(404, "Tweet not found")
+    }
 
+    const existingLike = await Like.findOne({
+        tweet: tweetId,
+        likedBy: req.user?._id
+    })
 
-export {toggleVideoLike,
-    toggleCommentLike
+    if (existingLike) {
+        await existingLike.deleteOne()
+        return res
+            .status(200)
+            .json(new ApiResponse(200, {liked: false}, "Tweet like removed"))
+    }
+
+    await Like.create({
+        tweet: tweetId,
+        likedBy: req.user?._id
+    })
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {liked: true}, "Tweet liked successfully"))
+})
+
+export {
+    toggleVideoLike,
+    toggleCommentLike,
+    toggleTweetLike
 }
