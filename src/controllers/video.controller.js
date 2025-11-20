@@ -173,10 +173,78 @@ const getVideoById = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, video, "Video fetched successfully"))
 })
+const updateVideo = asyncHandler(async (req, res) => {
+    const {videoId} = req.params
+
+    if (!videoId || !isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video ID")
+    }
+
+    const video = await Video.findById(videoId)
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
+
+    if (video.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You don't have permission to update this video")
+    }
+
+    const updates = {}
+
+    if (typeof req.body.title === "string") {
+        const trimmedTitle = req.body.title.trim()
+        if (!trimmedTitle) {
+            throw new ApiError(400, "Title cannot be empty")
+        }
+        updates.title = trimmedTitle
+    }
+
+    if (typeof req.body.description === "string") {
+        const trimmedDescription = req.body.description.trim()
+        if (!trimmedDescription) {
+            throw new ApiError(400, "Description cannot be empty")
+        }
+        updates.description = trimmedDescription
+    }
+
+    const thumbnailLocalPath =
+        req.files?.thumbnail?.[0]?.path ??
+        (req.file?.fieldname === "thumbnail" ? req.file.path : undefined)
+
+    let newThumbnailUrl
+    if (thumbnailLocalPath) {
+        const uploadedThumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+        if (!uploadedThumbnail?.url) {
+            throw new ApiError(500, "Failed to upload thumbnail")
+        }
+        newThumbnailUrl = uploadedThumbnail.url
+        updates.thumbnail = newThumbnailUrl
+    }
+
+    if (!Object.keys(updates).length) {
+        throw new ApiError(400, "Nothing to update")
+    }
+
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {$set: updates},
+        {new: true}
+    ).populate("owner", "fullName username avatar")
+
+    if (newThumbnailUrl) {
+        await deleteFromCloudinary(video.thumbnail)
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updatedVideo, "Video updated successfully"))
+
+})
 
 
 export {
     getAllVideos,
     publishAVideo,
-    getVideoById
+    getVideoById,
+    updateVideo
 }
